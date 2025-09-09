@@ -182,7 +182,7 @@ export default function CreateTicketModal({ open, onOpenChange }: CreateTicketMo
                           <SelectValue placeholder="Select Department (Optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not specified</SelectItem>
+                          <SelectItem value="not_specified">Not specified</SelectItem>
                           <SelectItem value="IT">IT</SelectItem>
                           <SelectItem value="HR">Human Resources</SelectItem>
                           <SelectItem value="Finance">Finance</SelectItem>

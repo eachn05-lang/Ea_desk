@@ -283,7 +283,7 @@ export default function Tickets() {
                             <SelectValue placeholder="Assign to..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Unassigned</SelectItem>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
                             {teamMembers?.map((member: User) => (
                               <SelectItem key={member.id} value={member.id}>
                                 {member.firstName} {member.lastName}
