@@ -11,6 +11,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, ilike, count } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -22,7 +23,7 @@ export interface IStorage {
   getTicketById(id: number): Promise<(Ticket & { creator: User; assignee?: User; comments: (Comment & { user: User })[] }) | undefined>;
   getTicketsByUser(userId: string): Promise<(Ticket & { creator: User; assignee?: User })[]>;
   getTicketsByAssignee(userId: string): Promise<(Ticket & { creator: User; assignee?: User })[]>;
-  createTicket(ticket: InsertTicket): Promise<Ticket>;
+  createTicket(ticket: Omit<InsertTicket, 'ticketNumber'>): Promise<Ticket>;
   updateTicket(id: number, updates: Partial<Ticket>): Promise<Ticket>;
   deleteTicket(id: number): Promise<void>;
   
@@ -43,6 +44,8 @@ export interface IStorage {
   getTeamMembers(): Promise<User[]>;
   updateUserRole(userId: string, role: string): Promise<User>;
 }
+
+const assigneeUser = alias(users, "assignee_user");
 
 export class DatabaseStorage implements IStorage {
   // User operations
@@ -72,13 +75,13 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(tickets)
       .leftJoin(users, eq(tickets.createdBy, users.id))
-      .leftJoin({ assigneeUser: users }, eq(tickets.assignedTo, users.id))
+      .leftJoin(assigneeUser, eq(tickets.assignedTo, assigneeUser.id))
       .orderBy(desc(tickets.createdAt));
 
     return results.map(result => ({
       ...result.tickets,
       creator: result.users!,
-      assignee: result.assigneeUser || undefined,
+      assignee: result.assignee_user || undefined,
     }));
   }
 
@@ -87,7 +90,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(tickets)
       .leftJoin(users, eq(tickets.createdBy, users.id))
-      .leftJoin({ assigneeUser: users }, eq(tickets.assignedTo, users.id))
+      .leftJoin(assigneeUser, eq(tickets.assignedTo, assigneeUser.id))
       .where(eq(tickets.id, id));
 
     if (!ticketResult) return undefined;
@@ -107,7 +110,7 @@ export class DatabaseStorage implements IStorage {
     return {
       ...ticketResult.tickets,
       creator: ticketResult.users!,
-      assignee: ticketResult.assigneeUser || undefined,
+      assignee: ticketResult.assignee_user || undefined,
       comments: ticketComments,
     };
   }
@@ -117,14 +120,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(tickets)
       .leftJoin(users, eq(tickets.createdBy, users.id))
-      .leftJoin({ assigneeUser: users }, eq(tickets.assignedTo, users.id))
+      .leftJoin(assigneeUser, eq(tickets.assignedTo, assigneeUser.id))
       .where(eq(tickets.createdBy, userId))
       .orderBy(desc(tickets.createdAt));
 
     return results.map(result => ({
       ...result.tickets,
       creator: result.users!,
-      assignee: result.assigneeUser || undefined,
+      assignee: result.assignee_user || undefined,
     }));
   }
 
@@ -133,18 +136,18 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(tickets)
       .leftJoin(users, eq(tickets.createdBy, users.id))
-      .leftJoin({ assigneeUser: users }, eq(tickets.assignedTo, users.id))
+      .leftJoin(assigneeUser, eq(tickets.assignedTo, assigneeUser.id))
       .where(eq(tickets.assignedTo, userId))
       .orderBy(desc(tickets.createdAt));
 
     return results.map(result => ({
       ...result.tickets,
       creator: result.users!,
-      assignee: result.assigneeUser || undefined,
+      assignee: result.assignee_user || undefined,
     }));
   }
 
-  async createTicket(ticket: InsertTicket): Promise<Ticket> {
+  async createTicket(ticket: Omit<InsertTicket, 'ticketNumber'>): Promise<Ticket> {
     // Generate ticket number
     const ticketCount = await db.select({ count: count() }).from(tickets);
     const ticketNumber = `TKT-${String(ticketCount[0].count + 1).padStart(4, '0')}`;
